@@ -48,7 +48,7 @@ def analyze_execution_performance(df):
     return df_exec, platform_stats, function_stats
 
 def perform_comparative_analysis(df_exec):
-    """Compare Fermyon vs AWS Lambda performance"""
+    """Compare Fermyon vs AWS Lambda performance using Mann-Whitney U Test"""
     functions = df_exec['name'].unique()
     comparison_results = []
 
@@ -56,10 +56,11 @@ def perform_comparative_analysis(df_exec):
         fermyon_data = df_exec[(df_exec['name'] == func) & (df_exec['platform'] == 'Fermyon Spin')]['execution_ms']
         aws_data = df_exec[(df_exec['name'] == func) & (df_exec['platform'] == 'AWS Lambda')]['execution_ms']
         
-        if len(fermyon_data) > 1 and len(aws_data) > 1:  # Need at least 2 samples for t-test
-            t_stat, p_value = stats.ttest_ind(fermyon_data, aws_data, equal_var=False)
+        if len(fermyon_data) > 1 and len(aws_data) > 1:
+            # Perform Mann-Whitney U Test
+            u_stat, p_value = stats.mannwhitneyu(fermyon_data, aws_data, alternative='two-sided')
         else:
-            t_stat, p_value = np.nan, np.nan
+            u_stat, p_value = np.nan, np.nan
         
         comparison_results.append({
             'function': func,
@@ -72,7 +73,7 @@ def perform_comparative_analysis(df_exec):
             'aws_std': aws_data.std(),
             'fermyon_cv': (fermyon_data.std() / fermyon_data.mean()) * 100 if fermyon_data.mean() != 0 else np.nan,
             'aws_cv': (aws_data.std() / aws_data.mean()) * 100 if aws_data.mean() != 0 else np.nan,
-            't_statistic': t_stat,
+            'u_statistic': u_stat,
             'p_value': p_value,
             'fermyon_faster': fermyon_data.mean() < aws_data.mean()
         })
@@ -115,28 +116,49 @@ def generate_visualizations(df_exec, comparison_df):
     plt.close()
 
     # 2. Function-level Comparison
-    plt.figure(figsize=(14, 8))
-    ax2 = sns.barplot(x='name', y='execution_ms', hue='platform', data=df_exec,
-                     palette=custom_palette, errorbar='sd', errwidth=1.5,
-                     capsize=0.1, saturation=0.85)
-    plt.title('Mean Execution Time by Function and Platform', weight='bold')
-    plt.ylabel('Mean Execution Time (ms)', labelpad=10)
-    plt.xlabel('Function', labelpad=10)
-    plt.xticks(rotation=45, ha='right')
+    plt.figure(figsize=(16, 8))
+    ax2 = sns.barplot(
+        x='name',
+        y='execution_ms',
+        hue='platform',
+        data=df_exec,
+        palette=custom_palette,
+        errorbar='sd',
+        errwidth=1.5,
+        capsize=0.1,
+        saturation=0.9
+    )
+    plt.title('Mean Execution Time by Function and Platform', fontsize=16, weight='bold', pad=12)
+    plt.ylabel('Mean Execution Time (ms)', fontsize=13)
+    plt.xlabel('Function', fontsize=13)
     plt.yscale('log')
-    ax2.grid(axis='y', linestyle='--', alpha=0.3)
-    ax2.legend(title='Platform', frameon=True, shadow=True)
+
+    plt.xticks(rotation=45, ha='right', fontsize=10)
+    plt.yticks(fontsize=10)
+
+    ax2.grid(axis='y', linestyle='--', alpha=0.4)
     
     # Add value labels for clarity
     for p in ax2.patches:
         height = p.get_height()
-        if height > 0:
-            ax2.text(p.get_x() + p.get_width()/2., height + 0.1,
-                    f'{height:.1f}', ha='center', va='bottom', fontsize=8)
-    
+        if height > 0 and not np.isnan(height):
+            ax2.text(
+                p.get_x() + p.get_width() / 2.,
+                height * 1.15,  # slightly above for log scale
+                f'{height:.1f}',
+                ha='center',
+                va='bottom',
+                fontsize=8
+            )
+
+    ax2.legend(title='Platform', title_fontsize=12, fontsize=10, frameon=True, loc='upper right')
+
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "figures", "function_execution_barplot.png"), 
-               dpi=300, bbox_inches='tight')
+    plt.savefig(
+        os.path.join(OUTPUT_DIR, "figures", "function_execution_barplot.png"),
+        dpi=300,
+        bbox_inches='tight'
+    )
     plt.close()
 
     # 3. Coefficient of Variation Comparison
@@ -171,26 +193,47 @@ def generate_visualizations(df_exec, comparison_df):
 
     # 4. Performance Difference Plot
     plt.figure(figsize=(14, 8))
-    ax4 = sns.barplot(x='function', y='mean_difference', data=comparison_df,
-                     palette=["#55A868" if x < 0 else "#C44E52" for x in comparison_df['mean_difference']])
-    plt.axhline(0, color='black', linestyle='--', linewidth=0.8)
+
+    # Filter NaNs to avoid plotting errors
+    clean_df = comparison_df.dropna(subset=['mean_difference'])
+
+    # Define color mapping based on value
+    colors = ["#55A868" if diff < 0 else "#C44E52" for diff in clean_df['mean_difference']]
+
+    ax4 = sns.barplot(
+        x='function',
+        y='mean_difference',
+        data=clean_df,
+        palette=colors
+    )
+
+    plt.axhline(0, color='black', linestyle='--', linewidth=1)
     plt.title('Performance Difference: Fermyon vs AWS Lambda', weight='bold')
     plt.ylabel('Mean Time Difference (ms)\n(Fermyon - AWS)', labelpad=10)
     plt.xlabel('Function', labelpad=10)
     plt.xticks(rotation=45, ha='right')
     ax4.grid(axis='y', linestyle='--', alpha=0.3)
-    
-    # Add value labels
-    for p in ax4.patches:
-        height = p.get_height()
-        if height != 0:
-            ax4.text(p.get_x() + p.get_width()/2., 
-                    height + (5 if height > 0 else -15),
-                    f'{height:.1f}', ha='center', va='center', fontsize=9)
-    
+
+    # Add value labels to bars
+    for bar in ax4.patches:
+        height = bar.get_height()
+        if not np.isnan(height):
+            label_y = height + 2 if height > 0 else height - 6
+            ax4.text(
+                bar.get_x() + bar.get_width() / 2.,
+                label_y,
+                f'{height:.1f}',
+                ha='center',
+                va='bottom' if height > 0 else 'top',
+                fontsize=9
+            )
+
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "figures", "performance_difference_barplot.png"), 
-               dpi=300, bbox_inches='tight')
+    plt.savefig(
+        os.path.join(OUTPUT_DIR, "figures", "performance_difference_barplot.png"),
+        dpi=300,
+        bbox_inches='tight'
+    )
     plt.close()
 
 def generate_report(comparison_df):

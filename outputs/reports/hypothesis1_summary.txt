@@ -7,12 +7,12 @@ Key Findings:
    - Fermyon shows lower CV (more consistent performance) in 4 out of 5 functions
 
 2. Statistical Significance:
-         function        p_value
-0      basic-http   3.893758e-08
-1   light-compute  7.458820e-189
-2   heavy-compute  9.638882e-227
-3       key-value   4.204837e-52
-4  query-external  1.025838e-143
+         function       p_value
+0      basic-http  5.316172e-01
+1   light-compute  1.250339e-35
+2   heavy-compute  1.250404e-35
+3       key-value  1.250209e-35
+4  query-external  1.250404e-35
 
 Conclusion:
 The data does not fully support the hypothesis that Wasm (Fermyon) executes business logic faster than microVMs (AWS) for lightweight computation tasks.
