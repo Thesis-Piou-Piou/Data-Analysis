@@ -1,18 +1,23 @@
 
 Hypothesis 1 Analysis Report - Handler Execution Performance (execution_ms)
 
+Data Distribution Characteristics:
+- 0 out of 5 function-platform combinations showed normal distribution (Shapiro-Wilk, p > 0.05)
+- test_used
+mannwhitneyu    5 tests were used based on normality assessment
+
 Key Findings:
 1. For lightweight tasks:
    - Fermyon shows lower mean execution time in 1 out of 5 functions
    - Fermyon shows lower CV (more consistent performance) in 4 out of 5 functions
 
 2. Statistical Significance:
-         function       p_value
-0      basic-http  5.316172e-01
-1   light-compute  1.250339e-35
-2   heavy-compute  1.250404e-35
-3       key-value  1.250209e-35
-4  query-external  1.250404e-35
+         function       p_value     test_used
+0      basic-http  5.316172e-01  mannwhitneyu
+1   light-compute  1.250339e-35  mannwhitneyu
+2   heavy-compute  1.250404e-35  mannwhitneyu
+3       key-value  1.250209e-35  mannwhitneyu
+4  query-external  1.250404e-35  mannwhitneyu
 
 Conclusion:
 The data does not fully support the hypothesis that Wasm (Fermyon) executes business logic faster than microVMs (AWS) for lightweight computation tasks.
