@@ -1,6 +1,6 @@
 
 Hypothesis 1 Analysis Report - Handler Execution Performance (execution_ms)
-=======================================================================
+----------------------------------------------------------------------------
 
 Data Distribution Characteristics:
 ----------------------------------
