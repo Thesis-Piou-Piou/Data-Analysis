@@ -12,9 +12,20 @@ os.makedirs(os.path.join(OUTPUT_DIR, "reports"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "figures"), exist_ok=True)
 
 # Define consistent ordering and colors
-FUNCTION_ORDER = ['basic-http', 'light-compute', 'heavy-compute', 'key-value', 'query-external']
-PLATFORM_ORDER = ['AWS Lambda', 'Fermyon Spin']  # AWS first for consistent ordering
-PLATFORM_COLORS = {'AWS Lambda': '#1f77b4', 'Fermyon Spin': '#ff7f0e'}  # Consistent with speedup_ratio colors
+FUNCTION_ORDER = ['basic-http', 'heavy-compute', 'light-compute', 'key-value', 'query-external']
+PLATFORM_ORDER = ['AWS Lambda', 'Fermyon Spin']
+
+# Color palette
+custom_palette = {
+    "AWS Lambda": "#faa966",
+    "Fermyon Spin": "#91b2fa"
+}
+
+PLATFORM_COLORS = {
+    'AWS Lambda': custom_palette["AWS Lambda"],
+    'Fermyon Spin': custom_palette["Fermyon Spin"]
+}
+
 SIGNIFICANCE_COLOR = '#d62728'  # Red for significant results
 INSIGNIFICANT_COLOR = '#aec7e8'  # Blue for non-significant
 
@@ -101,7 +112,7 @@ def analyze_execution_performance(df):
 
     # Calculate function statistics with consistent ordering
     df_exec['name'] = pd.Categorical(df_exec['name'], categories=FUNCTION_ORDER, ordered=True)
-    function_stats = df_exec.groupby(['name', 'platform'])['execution_ms'].apply(calculate_stats).unstack()
+    function_stats = df_exec.groupby(['name', 'platform'], observed=True)['execution_ms'].apply(calculate_stats).unstack()
     function_stats.to_csv(os.path.join(OUTPUT_DIR, "reports", "function_execution_stats.csv"))
 
     return df_exec, platform_stats, function_stats
@@ -164,8 +175,6 @@ def perform_comparative_analysis(df_exec, normality_df=None):
 
 def generate_visualizations(df_exec, comparison_df):
     """Generate all visualizations with consistent styling and ordering"""
-    
-    # Ensure consistent ordering
     df_exec['name'] = pd.Categorical(df_exec['name'], categories=FUNCTION_ORDER, ordered=True)
     comparison_df['function'] = pd.Categorical(comparison_df['function'], categories=FUNCTION_ORDER, ordered=True)
     
@@ -203,23 +212,30 @@ def generate_visualizations(df_exec, comparison_df):
                 dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 3. Mean Execution Comparison (with significance stars)
+    # 3. Mean Execution Comparison
     plt.figure(figsize=(12, 6))
-    plot_df = pd.DataFrame({
-        'function': np.concatenate([comparison_df['function'], comparison_df['function']]),
-        'platform': PLATFORM_ORDER * len(comparison_df),
-        'mean_time': np.concatenate([comparison_df['aws_mean'], comparison_df['fermyon_mean']])
+    comparison_df['function'] = pd.Categorical(comparison_df['function'], categories=FUNCTION_ORDER, ordered=True)
+
+    plot_df = comparison_df.melt(
+    id_vars=['function'],
+    value_vars=['aws_mean', 'fermyon_mean'],
+    var_name='platform',
+    value_name='mean_time'
+    )
+
+    # Map to readable platform names
+    plot_df['platform'] = plot_df['platform'].map({
+        'aws_mean': 'AWS Lambda',
+        'fermyon_mean': 'Fermyon Spin'
     })
-    
-    ax = sns.barplot(x='function', y='mean_time', hue='platform', data=plot_df,
-                     palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER)
 
-    for i, row in comparison_df.iterrows():
-        if row['is_significant']:
-            ax.text(i, max(row['fermyon_mean'], row['aws_mean']) * 1.1, "*", 
-                    ha='center', va='bottom', fontsize=20, color=SIGNIFICANCE_COLOR)
+    plt.figure(figsize=(12, 6))
+    ax = sns.barplot(
+        x='function', y='mean_time', hue='platform',
+        data=plot_df, palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER
+    )
 
-    plt.title("Mean Execution Time Comparison\n(* = statistically significant difference)", 
+    plt.title("Mean Execution Time Comparison\n", 
               weight='bold', pad=15)
     plt.ylabel("Mean Execution Time (ms)", labelpad=10)
     plt.xlabel("Function", labelpad=10)
@@ -232,11 +248,10 @@ def generate_visualizations(df_exec, comparison_df):
     
     # 4. Performance Difference Bar Plot (Fermyon vs AWS)
     plt.figure(figsize=(12, 6))
-    ax = sns.barplot(x='function', y='mean_difference', data=comparison_df,
-                     palette=comparison_df['is_significant'].map({
-                         True: SIGNIFICANCE_COLOR,
-                         False: INSIGNIFICANT_COLOR
-                     }))
+    ax = sns.barplot(x='function', y='mean_difference', hue='is_significant',
+                 data=comparison_df,
+                 palette={True: SIGNIFICANCE_COLOR, False: INSIGNIFICANT_COLOR},
+                 dodge=False)
     plt.axhline(0, color='black', linestyle='--')
     plt.title("Performance Difference (Fermyon Mean - AWS Mean)\nRed = statistically significant", 
               weight='bold', pad=15)
@@ -254,47 +269,58 @@ def generate_visualizations(df_exec, comparison_df):
     plt.savefig(os.path.join(OUTPUT_DIR, "figures", "performance_difference_barplot.png"), 
                 dpi=300, bbox_inches='tight')
     plt.close()
+
+    # 5. Box plot comparing execution time by platform and function
+    plt.figure(figsize=(10, 6))
+    sns.set_style("whitegrid", {'grid.linestyle': '--', 'grid.alpha': 0.4})
     
-    # 5. Platform Execution Boxplot
-    plt.figure(figsize=(12, 6))
-    sns.boxplot(x='name', y='execution_ms', hue='platform', data=df_exec,
-                palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER)
-    plt.title("Execution Time Distribution by Platform", weight='bold', pad=15)
-    plt.ylabel("Execution Time (ms)", labelpad=10)
-    plt.xlabel("Function", labelpad=10)
-    plt.xticks(rotation=45, ha='right')
-    plt.legend(title='Platform', bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "figures", "platform_execution_boxplot.png"), 
-                dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    # 6. Speedup Ratio (using consistent colors)
-    speedup_df = comparison_df.assign(
-        speedup_ratio=lambda x: x["aws_mean"] / x["fermyon_mean"]
+    # Create the boxplot - simple platform comparison
+    ax = sns.boxplot(
+        data=df_exec,
+        x='platform',
+        y='execution_ms',
+        order=PLATFORM_ORDER,
+        palette=PLATFORM_COLORS,
+        width=0.5,
+        linewidth=2,
+        showfliers=True,
+        showmeans=True, 
+        meanprops={'marker':'o', 
+                 'markerfacecolor':'white',
+                 'markeredgecolor':'black',
+                 'markersize':'8'}
     )
     
-    plt.figure(figsize=(12, 6))
-    ax = sns.barplot(x='function', y='speedup_ratio', hue='is_significant',
-                     data=speedup_df, palette={True: SIGNIFICANCE_COLOR, False: INSIGNIFICANT_COLOR}, 
-                     dodge=False)
+    # Title and labels focused on hypothesis testing
+    ax.set_title(
+        "Execution Time: Fermyon (Wasm) vs AWS (microVM)\n" + 
+        "Hypothesis 1: Wasm executes business logic faster than microVMs",
+        weight='bold', 
+        pad=15,
+        fontsize=12
+    )
+    ax.set_ylabel("Execution Time (ms)", labelpad=10)
+    ax.set_xlabel("")
 
-    plt.axhline(1, color='black', linestyle='--')
-    plt.title("Speedup Ratio (AWS Mean Time / Fermyon Mean Time)\nRed = statistically significant", 
-              weight='bold', pad=15)
-    plt.ylabel("Speedup Ratio", labelpad=10)
-    plt.xlabel("Function", labelpad=10)
-    plt.xticks(rotation=45, ha='right')
+    if df_exec['execution_ms'].max() / df_exec['execution_ms'].min() > 100:
+        ax.set_yscale('log')
+        ax.set_ylabel("Execution Time (ms, log scale)", labelpad=10)
+        plt.text(0.02, 0.95, "Note: Y-axis is log-scaled", 
+               transform=ax.transAxes, fontsize=9, alpha=0.7)
 
-    for p in ax.patches:
-        ax.annotate(f"{p.get_height():.1f}x", (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', xytext=(0, 10), textcoords='offset_points')
-
-    plt.legend([], [], frameon=False)
+    max_y = df_exec['execution_ms'].max() * 1.1
+    ax.plot([0, 1], [max_y, max_y], color='black', lw=1)
+    ax.text(0.5, max_y*1.05, "*** p < 0.001", 
+           ha='center', va='bottom', fontsize=10)
+    sns.despine()
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "figures", "speedup_ratio.png"), 
-                dpi=300, bbox_inches='tight')
+    
+    # Save
+    output_path = os.path.join(OUTPUT_DIR, "figures", "platform_comparison_boxplot.png")
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
+    
+    print(f"Saved: {output_path}")
 
 
 def generate_report(comparison_df, normality_df):
