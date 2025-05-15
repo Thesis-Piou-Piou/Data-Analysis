@@ -205,30 +205,7 @@ def generate_visualizations(df_exec, comparison_df):
                 dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 2. Function Execution Bar Plot
-    plt.figure(figsize=(12, 6))
-    ax = sns.barplot(x='name', y='execution_ms', hue='platform', data=df_exec,
-                     palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER,
-                     estimator=np.mean, errorbar=('ci', 95))
-    
-    # Add values on top of bars
-    for p in ax.patches:
-        height = p.get_height()
-        ax.text(p.get_x() + p.get_width()/2., height + 5,
-                f'{height:.1f}',
-                ha='center', va='bottom', fontsize=10)
-    
-    plt.title("Mean Execution Time by Function", weight='bold', pad=15)
-    plt.ylabel("Execution Time (ms)", labelpad=10)
-    plt.xlabel("Function", labelpad=10)
-    plt.xticks(rotation=45, ha='right')
-    plt.legend(title='Platform', bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "figures", "function_execution_barplot.png"), 
-                dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    # 3. Mean Execution Comparison
+    # 2. Mean Execution Comparison
     plt.figure(figsize=(12, 6))
     comparison_df['function'] = pd.Categorical(comparison_df['function'], categories=FUNCTION_ORDER, ordered=True)
 
@@ -253,13 +230,15 @@ def generate_visualizations(df_exec, comparison_df):
     # Add values on top of bars
     for p in ax.patches:
         height = p.get_height()
-        ax.text(p.get_x() + p.get_width()/2., height + 5,
-                f'{height:.1f}',
-                ha='center', va='bottom', fontsize=10)
-
+        if height > 0:
+            ax.text(p.get_x() + p.get_width()/2., height,
+                    f'{height:.3f}',
+                    ha='center', va='bottom', fontsize=10)
+        
+    plt.yscale('log')    
     plt.title("Mean Execution Time Comparison\n", 
               weight='bold', pad=15)
-    plt.ylabel("Mean Execution Time (ms)", labelpad=10)
+    plt.ylabel("Mean Execution Time (ms, log scale)", labelpad=10)
     plt.xlabel("Function", labelpad=10)
     plt.xticks(rotation=45, ha='right')
     plt.legend(title='Platform', bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -268,7 +247,7 @@ def generate_visualizations(df_exec, comparison_df):
                 dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 4. Performance Difference Bar Plot (Fermyon vs AWS)
+    # 3. Performance Difference Bar Plot (Fermyon vs AWS)
     plt.figure(figsize=(12, 6))
     ax = sns.barplot(x='function', y='mean_difference', hue='is_significant',
                  data=comparison_df,
@@ -292,7 +271,7 @@ def generate_visualizations(df_exec, comparison_df):
                 dpi=300, bbox_inches='tight')
     plt.close()
 
-    # 5. Box plot comparing execution time by platform and function
+    # 4. Box plot comparing execution time by platform and function
     plt.figure(figsize=(10, 6))
     sns.set_style("whitegrid", {'grid.linestyle': '--', 'grid.alpha': 0.4})
     
