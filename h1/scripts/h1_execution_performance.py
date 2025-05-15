@@ -185,8 +185,16 @@ def generate_visualizations(df_exec, comparison_df):
                              var_name='platform', value_name='cv')
     cv_df['platform'] = cv_df['platform'].map({'aws_cv': 'AWS Lambda', 'fermyon_cv': 'Fermyon Spin'})
     
-    sns.barplot(x='function', y='cv', hue='platform', data=cv_df,
+    ax = sns.barplot(x='function', y='cv', hue='platform', data=cv_df,
                 palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER)
+    
+    # Add values on top of bars
+    for p in ax.patches:
+        height = p.get_height()
+        ax.text(p.get_x() + p.get_width()/2., height + 0.5,
+                f'{height:.1f}%',
+                ha='center', va='bottom', fontsize=10)
+    
     plt.title("Coefficient of Variation Comparison", weight='bold', pad=15)
     plt.ylabel("Coefficient of Variation (%)", labelpad=10)
     plt.xlabel("Function", labelpad=10)
@@ -202,6 +210,14 @@ def generate_visualizations(df_exec, comparison_df):
     ax = sns.barplot(x='name', y='execution_ms', hue='platform', data=df_exec,
                      palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER,
                      estimator=np.mean, errorbar=('ci', 95))
+    
+    # Add values on top of bars
+    for p in ax.patches:
+        height = p.get_height()
+        ax.text(p.get_x() + p.get_width()/2., height + 5,
+                f'{height:.1f}',
+                ha='center', va='bottom', fontsize=10)
+    
     plt.title("Mean Execution Time by Function", weight='bold', pad=15)
     plt.ylabel("Execution Time (ms)", labelpad=10)
     plt.xlabel("Function", labelpad=10)
@@ -217,10 +233,10 @@ def generate_visualizations(df_exec, comparison_df):
     comparison_df['function'] = pd.Categorical(comparison_df['function'], categories=FUNCTION_ORDER, ordered=True)
 
     plot_df = comparison_df.melt(
-    id_vars=['function'],
-    value_vars=['aws_mean', 'fermyon_mean'],
-    var_name='platform',
-    value_name='mean_time'
+        id_vars=['function'],
+        value_vars=['aws_mean', 'fermyon_mean'],
+        var_name='platform',
+        value_name='mean_time'
     )
 
     # Map to readable platform names
@@ -229,11 +245,17 @@ def generate_visualizations(df_exec, comparison_df):
         'fermyon_mean': 'Fermyon Spin'
     })
 
-    plt.figure(figsize=(12, 6))
     ax = sns.barplot(
         x='function', y='mean_time', hue='platform',
         data=plot_df, palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER
     )
+
+    # Add values on top of bars
+    for p in ax.patches:
+        height = p.get_height()
+        ax.text(p.get_x() + p.get_width()/2., height + 5,
+                f'{height:.1f}',
+                ha='center', va='bottom', fontsize=10)
 
     plt.title("Mean Execution Time Comparison\n", 
               weight='bold', pad=15)
@@ -261,9 +283,9 @@ def generate_visualizations(df_exec, comparison_df):
     
     for p in ax.patches:
         height = p.get_height()
-        ax.text(p.get_x() + p.get_width()/2., height,
+        ax.text(p.get_x() + p.get_width()/2., height + (5 if height >= 0 else -15),
                 f'{height:.1f}',
-                ha='center', va='bottom')
+                ha='center', va='bottom' if height >= 0 else 'top', fontsize=10)
     
     plt.tight_layout()
     plt.savefig(os.path.join(OUTPUT_DIR, "figures", "performance_difference_barplot.png"), 
