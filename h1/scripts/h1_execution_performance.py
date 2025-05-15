@@ -7,7 +7,7 @@ from scipy import stats
 
 # Set up paths
 DATA_PATH = os.path.join("data", "processed", "cleaned_data.csv")
-OUTPUT_DIR = "outputs"
+OUTPUT_DIR = "h1/outputs"
 os.makedirs(os.path.join(OUTPUT_DIR, "reports"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "figures"), exist_ok=True)
 
