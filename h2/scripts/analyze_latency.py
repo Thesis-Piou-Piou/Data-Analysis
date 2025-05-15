@@ -270,6 +270,13 @@ custom_palette_boxplot = {
     "Fermyon Spin – Warm Start": "#91b2fa"
 }
 
+hue_order = [
+    "AWS Lambda – Inferred Cold Start",
+    "AWS Lambda – Warm Start",
+    "Fermyon Spin – Inferred Cold Start",
+    "Fermyon Spin – Warm Start"
+]
+
 # Create boxplot
 ax = sns.boxplot(
     data=df,
@@ -277,7 +284,9 @@ ax = sns.boxplot(
     y="overhead_ms",
     hue="platform_cold",
     palette=custom_palette_boxplot,
-    order=sorted_function_names
+    order=sorted_function_names,
+    hue_order=hue_order,
+    #flierprops=dict(marker="o", color="white", markersize=0)  # Hide outliers
 )
 
 # Set plot title and labels
