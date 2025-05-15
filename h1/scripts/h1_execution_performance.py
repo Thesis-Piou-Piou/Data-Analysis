@@ -248,24 +248,54 @@ def generate_visualizations(df_exec, comparison_df):
     plt.close()
     
     # 3. Performance Difference Bar Plot (Fermyon vs AWS)
-    plt.figure(figsize=(12, 6))
-    ax = sns.barplot(x='function', y='mean_difference', hue='is_significant',
-                 data=comparison_df,
-                 palette={True: SIGNIFICANCE_COLOR, False: INSIGNIFICANT_COLOR},
-                 dodge=False)
-    plt.axhline(0, color='black', linestyle='--')
-    plt.title("Performance Difference (Fermyon Mean - AWS Mean)\nRed = statistically significant", 
-              weight='bold', pad=15)
-    plt.ylabel("Mean Time Difference (ms)", labelpad=10)
-    plt.xlabel("Function", labelpad=10)
-    plt.xticks(rotation=45, ha='right')
-    
+    plt.figure(figsize=(12, 8))  # Maintained taller aspect ratio
+
+    # Create plot using PLATFORM_COLORS for bar colors
+    ax = sns.barplot(x='function', y='mean_difference', hue='platform',
+                    data=comparison_df.assign(
+                        platform=lambda x: np.where(x['mean_difference'] < 0, 
+                                                'Fermyon Spin', 
+                                                'AWS Lambda')
+                    ),
+                    palette=PLATFORM_COLORS,
+                    dodge=False)
+
+    # Configure logarithmic scale
+    ax.set_yscale('symlog', linthresh=0.1)
+    plt.axhline(0, color='black', linestyle='--', linewidth=1)
+
+    # Customize appearance
+    plt.title("Execution Time Difference: Fermyon Spin vs AWS Lambda",
+            weight='bold', pad=20, fontsize=14)
+    plt.ylabel("Fermyon Mean - AWS Mean (ms, log scale)", labelpad=15, fontsize=12)
+    plt.xlabel("Function", labelpad=15, fontsize=12)
+    plt.xticks(rotation=45, ha='right', fontsize=10)
+
+    # Clean, unified text labels
     for p in ax.patches:
         height = p.get_height()
-        ax.text(p.get_x() + p.get_width()/2., height + (5 if height >= 0 else -15),
-                f'{height:.1f}',
-                ha='center', va='bottom' if height >= 0 else 'top', fontsize=10)
-    
+        abs_height = abs(height)
+        
+        # Smart label formatting based on magnitude
+        if abs_height < 1:
+            label = f"{height:.3f} ms"
+        elif abs_height < 10:
+            label = f"{height:.2f} ms"
+        else:
+            label = f"{height:.1f} ms"
+        
+        # Perfectly centered labels
+        ax.text(p.get_x() + p.get_width()/2.,
+                height * 1.1 if height >= 0 else height * 0.9,
+                label,
+                ha='center',
+                va='bottom' if height >= 0 else 'top',
+                fontsize=10,
+                color='black')
+
+    # Add platform legend
+    plt.legend(title='Platform', bbox_to_anchor=(1.02, 1), loc='upper left')
+
     plt.tight_layout()
     plt.savefig(os.path.join(OUTPUT_DIR, "figures", "performance_difference_barplot.png"), 
                 dpi=300, bbox_inches='tight')
