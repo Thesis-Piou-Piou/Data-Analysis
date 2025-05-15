@@ -265,7 +265,7 @@ def generate_visualizations(df_exec, comparison_df):
     plt.axhline(0, color='black', linestyle='--', linewidth=1)
 
     # Customize appearance
-    plt.title("Execution Time Difference: Fermyon Spin vs AWS Lambda",
+    plt.title("Statistically Significant Execution Time Difference: Fermyon Spin vs AWS Lambda",
             weight='bold', pad=20, fontsize=14)
     plt.ylabel("Fermyon Mean - AWS Mean (ms, log scale)", labelpad=15, fontsize=12)
     plt.xlabel("Function", labelpad=15, fontsize=12)
