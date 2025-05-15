@@ -1,0 +1,21 @@
+comparison,context,n_1,n_2,statistic,p_value,significant
+AWS Cold vs Fermyon Cold,cross-platform cold,30,30,900.0,0.0,Yes
+AWS Warm vs Fermyon Warm,cross-platform warm,120,120,14399.0,0.0,Yes
+AWS Cold vs AWS Warm,within-AWS,30,120,3600.0,0.0,Yes
+Fermyon Cold vs Fermyon Warm,within-Fermyon,30,120,2884.0,0.0,Yes
+AWS Cold vs Fermyon Cold,cross-platform cold,30,30,900.0,0.0,Yes
+AWS Warm vs Fermyon Warm,cross-platform warm,120,120,14400.0,0.0,Yes
+AWS Cold vs AWS Warm,within-AWS,30,120,3566.0,0.0,Yes
+Fermyon Cold vs Fermyon Warm,within-Fermyon,30,120,1852.0,0.8088,No
+AWS Cold vs Fermyon Cold,cross-platform cold,30,30,0.0,0.0,Yes
+AWS Warm vs Fermyon Warm,cross-platform warm,120,120,0.0,0.0,Yes
+AWS Cold vs AWS Warm,within-AWS,30,120,3600.0,0.0,Yes
+Fermyon Cold vs Fermyon Warm,within-Fermyon,30,120,1863.0,0.769,No
+AWS Cold vs Fermyon Cold,cross-platform cold,30,30,900.0,0.0,Yes
+AWS Warm vs Fermyon Warm,cross-platform warm,120,120,14289.0,0.0,Yes
+AWS Cold vs AWS Warm,within-AWS,30,120,3600.0,0.0,Yes
+Fermyon Cold vs Fermyon Warm,within-Fermyon,30,120,1947.0,0.4913,No
+AWS Cold vs Fermyon Cold,cross-platform cold,30,30,900.0,0.0,Yes
+AWS Warm vs Fermyon Warm,cross-platform warm,120,120,152.0,0.0,Yes
+AWS Cold vs AWS Warm,within-AWS,30,120,3600.0,0.0,Yes
+Fermyon Cold vs Fermyon Warm,within-Fermyon,30,120,1906.0,0.6201,No

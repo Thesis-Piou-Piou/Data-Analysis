@@ -1,0 +1,21 @@
+function,platform,cold_start,n,shapiro_p,conclusion
+basic-http,Fermyon Spin,True,30,0.2406,Shapiro p=0.2406 → Possibly normal
+basic-http,Fermyon Spin,False,120,0.0,Shapiro p=0.0000 → Not normal
+basic-http,AWS Lambda,True,30,0.7373,Shapiro p=0.7373 → Possibly normal
+basic-http,AWS Lambda,False,120,0.0003,Shapiro p=0.0003 → Not normal
+light-compute,Fermyon Spin,True,30,0.0002,Shapiro p=0.0002 → Not normal
+light-compute,Fermyon Spin,False,120,0.0,Shapiro p=0.0000 → Not normal
+light-compute,AWS Lambda,True,30,0.3833,Shapiro p=0.3833 → Possibly normal
+light-compute,AWS Lambda,False,120,0.0,Shapiro p=0.0000 → Not normal
+heavy-compute,Fermyon Spin,True,30,0.0441,Shapiro p=0.0441 → Not normal
+heavy-compute,Fermyon Spin,False,120,0.0051,Shapiro p=0.0051 → Not normal
+heavy-compute,AWS Lambda,True,30,0.9194,Shapiro p=0.9194 → Possibly normal
+heavy-compute,AWS Lambda,False,120,0.0,Shapiro p=0.0000 → Not normal
+key-value,Fermyon Spin,True,30,0.0,Shapiro p=0.0000 → Not normal
+key-value,Fermyon Spin,False,120,0.0,Shapiro p=0.0000 → Not normal
+key-value,AWS Lambda,True,30,0.0,Shapiro p=0.0000 → Not normal
+key-value,AWS Lambda,False,120,0.0,Shapiro p=0.0000 → Not normal
+query-external,Fermyon Spin,True,30,0.0122,Shapiro p=0.0122 → Not normal
+query-external,Fermyon Spin,False,120,0.0,Shapiro p=0.0000 → Not normal
+query-external,AWS Lambda,True,30,0.0,Shapiro p=0.0000 → Not normal
+query-external,AWS Lambda,False,120,0.0,Shapiro p=0.0000 → Not normal

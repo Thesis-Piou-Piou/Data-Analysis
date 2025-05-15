@@ -2,8 +2,8 @@ import pandas as pd
 import os
 
 # Paths
-INPUT_PATH = "data/raw/cumulative_results.csv"
-OUTPUT_PATH = "data/processed/cleaned_data.csv"
+INPUT_PATH = "raw/cumulative_results.csv"
+OUTPUT_PATH = "processed/cleaned_data.csv"
 
 # Load data
 df = pd.read_csv(INPUT_PATH)
