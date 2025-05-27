@@ -181,20 +181,21 @@ def generate_visualizations(df_exec, comparison_df):
     # 1. Coefficient of Variation Comparison Bar Plot
     plt.figure(figsize=(12, 6))
     cv_df = comparison_df.melt(id_vars=['function'], 
-                             value_vars=['aws_cv', 'fermyon_cv'],
-                             var_name='platform', value_name='cv')
+                            value_vars=['aws_cv', 'fermyon_cv'],
+                            var_name='platform', value_name='cv')
     cv_df['platform'] = cv_df['platform'].map({'aws_cv': 'AWS Lambda', 'fermyon_cv': 'Fermyon Spin'})
-    
+
     ax = sns.barplot(x='function', y='cv', hue='platform', data=cv_df,
                 palette=PLATFORM_COLORS, hue_order=PLATFORM_ORDER)
-    
-    # Add values on top of bars
+
+    # Add values on top of bars - ONLY if CV > 0.1%
     for p in ax.patches:
         height = p.get_height()
-        ax.text(p.get_x() + p.get_width()/2., height + 0.5,
-                f'{height:.1f}%',
-                ha='center', va='bottom', fontsize=10)
-    
+        if height > 0.1:  # Only show labels for CV > 0.1%
+            ax.text(p.get_x() + p.get_width()/2., height + 0.5,
+                    f'{height:.1f}%',
+                    ha='center', va='bottom', fontsize=10)
+
     plt.title("Coefficient of Variation Comparison", weight='bold', pad=15)
     plt.ylabel("Coefficient of Variation (%)", labelpad=10)
     plt.xlabel("Function", labelpad=10)
