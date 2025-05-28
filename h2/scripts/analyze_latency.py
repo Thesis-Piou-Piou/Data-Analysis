@@ -6,25 +6,13 @@ import seaborn as sns
 import numpy as np
 import os
 
-# Load cleaned data
-df = pd.read_csv("../data/processed/cleaned_data.csv", parse_dates=["timestamp"])
-df["cold_start"] = df["cold_start"].astype(bool)
+# ── Visualization 1: Grouped bar chart ──
 
-# Calculate execution/overhead ratio
-df["exec_overhead_ratio"] = df["execution_ms"] / df["overhead_ms"]
-
-# Group by platform, function name, and cold_start for overhead latency summary
-summary = (
-    df.groupby(["platform", "name", "cold_start"])["overhead_ms"]
-    .agg(mean="mean", median="median", std="std", count="count")
-    .reset_index()
-)
-
-# Remove rows with invalid mean values (like zero or negative) for a better plot
-summary = summary[summary["mean"] > 0]
+# Load precomputed summary for overhead latency
+overhead_summary = pd.read_csv("outputs/reports/overhead_latency_summary.csv")
 
 # Add 'platform_cold' column to summary for plotting
-summary["platform_cold"] = summary.apply(
+overhead_summary["platform_cold"] = overhead_summary.apply(
     lambda row: f"{row['platform']} – {'Inferred Cold Start' if row['cold_start'] else 'Warm Start'}", axis=1
 )
 
@@ -36,17 +24,19 @@ custom_palette = {
     "Fermyon Spin – Warm Start": "#91b2fa"
 }
 
-# ── Visualization 1: Grouped bar chart ──
 plt.figure(figsize=(14, 7))
 ax1 = sns.barplot(
-    data=summary,
+    data=overhead_summary,
     x="name",
     y="mean",
     hue="platform_cold",
     palette=custom_palette,
     hue_order=["AWS Lambda – Inferred Cold Start", "AWS Lambda – Warm Start", "Fermyon Spin – Inferred Cold Start", "Fermyon Spin – Warm Start"],
     ci=None,
-    edgecolor=None
+    edgecolor=None,
+    dodge=True,
+    zorder=3,
+    width=0.8
 )
 
 # Add value labels on top of the bars with proper formatting
@@ -59,36 +49,36 @@ for i, bar in enumerate(ax1.patches):
             f"{height:.2f}",  # Format with two decimal places
             ha="center",
             va="bottom",
-            fontsize=10
+            fontsize=8,
         )
 
-# Set y-axis limit to better visualize values
-ax1.set_ylim(0, summary["mean"].max() * 1.1)  # Increase max y-limit slightly
+ax1.set_ylim(0,overhead_summary["mean"].max() * 1.1) # Set y-axis limit to better visualize values
 
-ax1.set_title("Mean Overhead Latency by Function (Inferred Cold vs Warm, by Platform)")
 ax1.set_ylabel("Mean Overhead (ms)")
 ax1.set_xlabel("Function")
 ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
-ax1.legend(title="Platform / Start Type")
+
+ax1.legend(
+    title="Platform / Start Type",
+    loc='upper left',  # Location of the legend
+    bbox_to_anchor=(1.05, 1),  # Position the legend outside the plot
+    borderaxespad=0.,  # Padding between legend and plot
+    fontsize=10
+)
+
+ax1.grid(True, axis='y', linestyle='-', linewidth=1, zorder=1 )
+
 plt.tight_layout()
 plt.savefig("outputs/figures/mean_overhead_platform_coldwarm.png")
 plt.close()
 print("Saved: mean_overhead_platform_coldwarm.png")
 
 # ── Visualization 2: Cold start penalty plot ──
-penalty = (
-    summary[summary["cold_start"] == True].merge(
-        summary[summary["cold_start"] == False],
-        on=["platform", "name"],
-        suffixes=("_cold", "_warm")
-    )
-)
 
-penalty["cold_start_penalty_%"] = (
-    (penalty["mean_cold"] - penalty["mean_warm"]) / penalty["mean_warm"] * 100
-).round(2)
+# Load precomputed cold start penalty summary
+penalty = pd.read_csv("outputs/reports/cold_start_penalty_summary.csv")
 
-# Update platform names for the labels
+# Ensure the platform column is consistent for plotting
 penalty["platform"] = penalty["platform"].replace({
     "AWS Lambda": "AWS Lambda",
     "Fermyon Spin": "Fermyon Spin"
@@ -107,7 +97,9 @@ ax2 = sns.barplot(
     y="cold_start_penalty_%",
     hue="platform",
     palette=custom_palette_penalty,
-    errorbar=None
+    errorbar=None,
+    dodge=True,
+    zorder=3
 )
 
 # Add value labels on top of the bars
@@ -125,12 +117,22 @@ for container in ax2.containers:
             fontsize=9
         )
 
-# Set plot title and labels
-ax2.set_title("Inferred Cold Start Penalty (%) by Function and Platform")
 ax2.set_ylabel("Inferred Cold Start Penalty (%)")
 ax2.set_xlabel("Function")
 ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45)
-ax2.legend(title="Platform", labels=["AWS Lambda", "Fermyon Spin"])
+ax2.legend(
+    title="Platform",
+    loc='upper left',
+    bbox_to_anchor=(1.05, 1),
+    borderaxespad=0.,
+    fontsize=10
+)
+ax2.grid(True, axis='y', linestyle='-', linewidth=1, zorder=1 )
+
+# Manually set y-axis limits to add padding between the highest/lowest values and the plot margins
+padding = 5
+ymin, ymax = ax2.get_ylim()
+ax2.set_ylim(ymin - padding, ymax + padding)
 
 plt.tight_layout()
 plt.savefig("outputs/figures/cold_start_penalty_labeled.png")
@@ -139,6 +141,9 @@ print("Saved: cold_start_penalty_labeled.png")
 
 # ── Visualization 3: Dot Plot for Overhead Latency ──
 plt.figure(figsize=(14, 7))
+
+df = pd.read_csv("../data/processed/cleaned_data.csv", parse_dates=["timestamp"])
+df["cold_start"] = df["cold_start"].astype(bool)
 
 # Update platform_cold label for consistency with bar chart
 df["platform_cold"] = df.apply(
@@ -178,13 +183,18 @@ ax3 = sns.stripplot(
     hue_order=hue_order 
 )
 
-# Set plot title and labels
-ax3.set_title("Overhead Latency Distribution by Function and Platform (Dot Plot)")
+# Set plot labels
 ax3.set_xlabel("Overhead Latency (ms)")
 ax3.set_ylabel("Function")
 ax3.set_xticklabels(ax3.get_xticklabels(), rotation=45)
 
-ax3.legend(title="Platform / Start Type") 
+ax3.legend(
+    title="Platform / Start Type",
+    loc='upper left',
+    bbox_to_anchor=(1.05, 1),
+    borderaxespad=0.,
+    fontsize=10
+)
 
 # Tight layout to prevent overlapping
 plt.tight_layout()
@@ -196,7 +206,8 @@ print("Saved: overhead_latency_dot_plot.png")
 
 # ── Visualization 4: Dot plot for Total Execution Time ──
 
-# Add 'platform_cold' column to df for plotting
+df = pd.read_csv("../data/processed/cleaned_data.csv", parse_dates=["timestamp"])
+df["cold_start"] = df["cold_start"].astype(bool)
 df["platform_cold"] = df.apply(
     lambda row: f"{row['platform']} – {'Inferred Cold Start' if row['cold_start'] else 'Warm Start'}", axis=1
 )
@@ -235,13 +246,18 @@ ax4 = sns.stripplot(
     hue_order=hue_order 
 )
 
-# Set plot title and labels
-ax4.set_title("Total Execution Time by Function and Platform")
+# Set plot labels
 ax4.set_xlabel("Total Execution Time (ms)")
 ax4.set_ylabel("Function")
 ax4.set_xticklabels(ax4.get_xticklabels(), rotation=45)
 
-ax4.legend(title="Platform / Start Type") 
+ax4.legend(
+    title="Platform / Start Type",
+    loc='upper left',
+    bbox_to_anchor=(1.05, 1),
+    borderaxespad=0.,
+    fontsize=10
+)
 
 # Tight layout to prevent overlapping
 plt.tight_layout()
@@ -289,8 +305,7 @@ ax = sns.boxplot(
     #flierprops=dict(marker="o", color="white", markersize=0)  # Hide outliers
 )
 
-# Set plot title and labels
-ax.set_title("Overhead Latency Distribution by Function (Boxplot)")
+# Set plot labels
 ax.set_ylabel("Overhead Latency (ms)")
 ax.set_xlabel("Function")
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
@@ -303,3 +318,71 @@ plt.tight_layout()
 plt.savefig("outputs/figures/boxplot_overhead_latency_by_function.png")
 plt.close()
 print("Saved: outputs/figures/boxplot_overhead_latency_by_function.png")
+
+# ── Visualization 6: Total Execution Time by Function and Platform ──
+
+# Load total performance summary csv file
+total_exec_df = pd.read_csv("outputs/reports/total_performance_summary.csv")
+total_exec_df["platform_cold"] = total_exec_df.apply(
+    lambda row: f"{row['platform']} – {'Inferred Cold Start' if row['cold_start'] else 'Warm Start'}", axis=1
+)
+
+# Custom color palette
+custom_palette_exec = {
+    "AWS Lambda – Inferred Cold Start": "#faddc5",
+    "AWS Lambda – Warm Start": "#faa966",
+    "Fermyon Spin – Inferred Cold Start": "#dfe7fa",
+    "Fermyon Spin – Warm Start": "#91b2fa"
+}
+
+hue_order = [
+    "AWS Lambda – Inferred Cold Start",
+    "AWS Lambda – Warm Start",
+    "Fermyon Spin – Inferred Cold Start",
+    "Fermyon Spin – Warm Start"
+]
+
+plt.figure(figsize=(14, 7))
+ax6 = sns.barplot(
+    data=total_exec_df,
+    x="name",
+    y="mean_total",
+    hue="platform_cold",
+    palette=custom_palette_exec,
+    hue_order=hue_order,
+    ci=None,
+    edgecolor=None,
+    dodge=True,
+    zorder=3,
+    width=0.8
+)
+
+# Add value labels
+for bar in ax6.patches:
+    height = bar.get_height()
+    if height > 0:
+        ax6.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + 5,
+            f"{height:.2f}",
+            ha="center",
+            va="bottom",
+            fontsize=6
+        )
+
+ax6.set_ylabel("Mean Total Execution Time (ms)")
+ax6.set_xlabel("Function")
+ax6.set_xticklabels(ax6.get_xticklabels(), rotation=45)
+ax6.legend(
+    title="Platform / Start Type",
+    loc='upper left',
+    bbox_to_anchor=(1.05, 1),
+    borderaxespad=0.,
+    fontsize=10
+)
+ax6.grid(True, axis='y', linestyle='-', linewidth=1, zorder=1)
+
+plt.tight_layout()
+plt.savefig("outputs/figures/mean_total_execution_time_by_platform.png")
+plt.close()
+print("Saved: mean_total_execution_time_by_platform.png")
